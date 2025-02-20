@@ -1,233 +1,128 @@
-# Finvu Android SDK Integration Guide
+# Finvu Android Demo App
 
-## Table of Contents
-1. [Introduction](#introduction)
-2. [Prerequisites](#prerequisites)
-3. [Installation](#installation)
-4. [Accessing Finvu SDK APIs](#accessing-finvu-sdk-apis)
-5. [Initialization](#initialization)
-6. [Usage](#usage)
-7. [APIs](#apis)
-8. [Frequently Asked Questions](#frequently-asked-questions)
+This demo application showcases the implementation and flows of the Finvu Android SDK. It demonstrates account discovery, linking, and consent management functionalities.
 
-## Introduction
-Welcome to the Demo App to use Finvu Android SDK! This document provides detailed instructions on integrating our SDK into your android application.
+## Getting Started
 
-## Prerequisites
-    1. Min SDK version supported is 24
-    2. Min kotlin version supported is 1.9.0
+1. Configure GitHub credentials in settings.gradle.kts
+2. Build and run the application
+3. Use test credentials to explore the flows
+4. Follow the sequential flows from login to consent management
 
-## Installation
+## Key Flows
 
-1. On android add the following repository to your project level `build.gradle` file. Github packages require that all packges need to be accessed with credentials. Our repository is public, so can be accessed with any github user. Create a  [PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) which can be used here as GITHUB_PACKAGE_TOKEN
-```
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
+### 1. Authentication Flow
+- Initial login screen where user enters:
+    - Username
+    - Mobile number
+    - Consent Handle ID
+- OTP verification
+- On successful verification, user is redirected to main dashboard
+
+### 2. Main Dashboard Flow
+- Displays list of linked accounts
+- Provides options to:
+    - Add new account
+    - Process consent
+- Fetches and displays all linked accounts in a recycler view
+
+### 3. Account Discovery & Linking Flow
+1. Popular Search
+    - Displays list of available FIPs (Financial Information Providers)
+    - User selects a FIP to proceed
+
+2. Account Discovery
+    - User enters mobile number (mandatory)
+    - Optional PAN number input
+    - Fetches available accounts from selected FIP
+    - Shows both unlinked and already linked accounts
+    - Allows selection of multiple accounts for linking
+
+3. Account Linking Confirmation
+    - OTP verification for selected accounts
+    - On successful verification, accounts are linked
+    - Redirects back to main dashboard
+
+### 4. Consent Management Flow
+
+#### Pre-defined Consent Handle IDs
+For demonstration purposes, the app uses predefined consent handle IDs:
+
+var consentHandleIds = mutableListOf(
+"c518e2a3-d738-4241-a744-49e23832a643",
+"62584175-37e4-462f-a4c9-3b95247b80c3",
+"ef4c9d2d-90a5-410c-a212-86c10846cf13"
+)
+
+
+#### A. Consent Details Display
+- Shows comprehensive consent information:
+    - Purpose
+    - Data fetch frequency
+    - Data usage period
+    - Date ranges
+    - Account types requested
+
+#### B. Account Selection
+- Lists linked accounts
+- Allows selection of accounts for consent
+
+#### C. Consent Actions
+1. Multi Consent Flow
+    - Uses single consent handle ID (index 0) for all selected accounts
+    - Processes all accounts in one API call
+    - Simpler implementation for basic use cases
+    - Example implementation:
+    ```kotlin
+    fun multiConsentFlow() {
+        FinvuManager.shared.approveConsentRequest(
+            consentDetailList[LoginActivity.consentHandleIds[0]]!!,
+            linkedAccountsSelectableAdapter!!.getSelectedItems()
+        ) { result ->
+            // Handle success/failure
+        }
+    }
+    ```
+
+2. Split Consent Flow
+    - Creates separate consent requests for each selected account
+    - Uses different consent handle IDs for each account
+    - First account treated as parent consent, others as child consents
+    - Validates selected accounts match available consent handle IDs
+    - Example implementation:
+    ```kotlin
+    fun splitConsentFlow() {
+        if (linkedAccountsSelectableAdapter!!.getSelectedItems().size != LoginActivity.consentHandleIds.size) {
+            // Shows error if mismatch
+            return
+        }
         
-        // Add these lines
-        maven { 
-            url 'https://maven.pkg.github.com/Cookiejar-technologies/finvu_android_sdk' 
-            credentials {
-                username = System.getenv("GITHUB_PACKAGE_USERNAME")
-                password = System.getenv("GITHUB_PACKAGE_TOKEN")
-            }
+        for ((index, account) in linkedAccountsSelectableAdapter!!.getSelectedItems().withIndex()) {
+            // Process each account with corresponding consent handle ID
         }
     }
-}
-```
-3. On android add the below in app level build.gradle file
-```
-    defaultConfig {
-        minSdkVersion 24
-    }
+    ```
 
-```
+3. Reject Consent
+    - Denies the consent request using first consent handle ID
+    - Cancels the entire consent process
 
-## Accessing Finvu SDK APIs
-`FinvuManager` class that should be used to access the APIs on the SDK. `FinvuManager` class is a singleton, and can be access as follows:
-```kotlin
-    private val finvuManager = FinvuManager.shared
-```
+#### Important Implementation Notes
+##### Consent Handle ID Management:
 
-## Initialization
-Initialize the SDK in your application's entry point (eg. splash screen). SDK can be initialized using the the following method.
-```kotlin
-    private val baseUrl = "wss://webvwdev.finvu.in/consentapi"
-    private val finvuClientConfig = FinvuClientConfig(finvuEndpoint = baseUrl))
-```
+    - Demo uses predefined IDs for simplicity
+    - In production, generate new consent handle IDs for each selected account
+    - Number of selected accounts must match available consent handle IDs
 
-## Usage
-Refer to the SDK documentation for detailed instructions on using various features and functionalities provided by the SDK. Below is the sequence diagram which includes SDK initialization, account linking and data fetch flows.
-![sequence-diagram](docs/Sequence-diagram.png)
+## Dependencies
 
-## APIs
+The app uses the following Finvu SDK components:
+- implementation("com.finvu.android:core-sdk:1.0.3") //Check the latest version
+- implementation("com.finvu.android:client-sdk:1.0.3") //Check the latest version
 
-1. Initialize with config
-   Initialize API allows you to configure the finvuEndpoint. This is a way to configure the SDK to point to specific environments.
-```kotlin
-        finvuManager.initializeWith(finvuClientConfig)
-```
 
-2. Connect
-   Finvu exposes websocket APIs that the sdk interacts with. Before making any other calls, connect method should be called.
-```kotlin
-    finvuManager.connect { result ->
-            runOnUiThread {
-                if (result.isSuccess) {
-                    Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show()
-                } else {
-                    when ((result.exceptionOrNull() as FinvuException).code) {
-                        // messaging to the user
-                    }
-                }
-            }
-        }
-```
+## Production Considerations
+1. Replace hardcoded consent handle IDs with dynamically generated ones
+2. Implement proper validation for consent expiry and other parameters
 
-3. Login with Consent Handle
-   Once the consent handle has been retrieved from the FIU server and we want to initiate the login flow for the user, it can be done in the following manner.
-   for the Demo app we have added a list of consent handle id in LoginActivity itself for illustration of number of consent handle ID's required for the flow (For login single consent handle id required).
-```kotlin
-FinvuManager.shared.loginWithUsernameOrMobileNumber(
-      username = username,
-      mobileNumber = mobileNumber,
-      consentHandleId = consentHandleId
-    ) {
-      if (it.isFailure) {
-        // handle errors 
-      }
-
-      val response = it.getOrThrow()
-      val loginOtpReference = response.reference
-    }
-```
-
-4. Verify login otp
-   The login response contains the otp reference. Once user enters the otp, verification can be triggered in the following way -
-```kotlin
-FinvuManager.shared.verifyLoginOtp(otp = otp, otpReference = otpReference) {
-      if (it.isFailure) {
-        val error = it.exceptionOrNull() as FinvuException
-        // understand the failure
-      }
-
-      val handleInfo = response.userId
-    }
-```
-Post login success, sdk will keep this session authenticated for the user and the rest of the methods can be triggered.
-
-5. Fetch all FIP options
-   Use this method to get all FIP details where discovery flows can be triggered
-```kotlin
-    FinvuManager.shared.fipsAllFIPOptions { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-        //handle the error
-      }
-
-      val response = result.getOrThrow()
-    }
-```
-
-6. Account discovery
-   In order to initiate discovery flow, you will need to get FIP details first. Get them for the selected FIP in the following way
-```kotlin
-FinvuManager.shared.fetchFipDetails(fipId) { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-      }
-
-      val response = result.getOrThrow()
-    }
-```
-Once FIPDetails are available, discovery can be made with the following step - (We also have discoverAccountsAsync function which will respond in non-syncronous way with same request and response)
-
-```kotlin
-FinvuManager.shared.discoverAccounts(finvuFipDetails, fiTypes, finvuIdentifiers) { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-      }
-
-      val response = result.getOrThrow()
-    }
-```
-FITypes describe the type of accounts that we want to discover, typeIdentifiers provides the identifiers to discover them with. Here's an example of what thay may look like -
-```json
-    {
-        "category": "STRONG",
-        "type": "MOBILE",
-        "value": "93XXXXXXXX"
-    }
-```
-
-7. Initiate account linking
-   Once accounts have been discovered, linking flow may be initiated. Multiple accounts can be linked at once.
-```kotlin
-FinvuManager.shared.linkAccounts(finvuAccounts, finvuFipDetails) { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-        // handle error
-      }
-
-      val response = result.getOrThrow()
-      val accountLinkingRequestReference = (response.referenceNumber)
-    }
-```
-
-8. Confirm account linking
-   On initiating account linking flow, an otp will be triggered by the FIP to the user. SDK will return a reference for this linking. Once user enters the top, linking can be confirmed by doing the following -
-
-```kotlin
-FinvuManager.shared.confirmAccountLinking(referenceNumber, otp) { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-      }
-
-      val response = result.getOrThrow()
-    }
-```
-
-9. Fetch all linked accounts
-   All existing linked accounts for the user can be fetched in the following manner -
-```kotlin
-    FinvuManager.shared.fetchLinkedAccounts { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-      }
-      val response = result.getOrThrow()
-    }
-```
-
-10. Consent flow
-    Once consent info is displayed to the user and user approves it, you can call the following method to convey the approval
-    While consent approval we have two possible flows:
-    a) Multi-Consent Flow: Where for the single consent handle id which was generated for login will be used to approve list of all selected accounts by user.
-    b) Split-Consent Flow: Here to Increase success rate, we need to generate Consent Handle ID's for each account selected -1 (as we already have one id which was generated for login) and approveConsentRequest for each handle id with each selected account one by one (Need to create new handle IDs the way initial handle id was generated)
-```kotlin
-FinvuManager.shared.approveConsentRequest(consentDetails, finvuLinkedAccounts) { result ->
-      if (result.isFailure) {
-        val error = result.exceptionOrNull() as FinvuException
-      }
-
-      val response = result.getOrThrow()
-    }
-```
-
-In case user denies the consent, call this method instead -
-```kotlin
-    FinvuManager.shared.denyConsentRequest(consentRequestDetailInfo);
-```
-
-## Frequently Asked Questions
-Q. On Android I am getting the error `Class 'com.finvu.android.publicInterface.xxxxx' was compiled with an incompatible version of Kotlin. The binary version of its metadata is 1.9.0, expected version is 1.7.1.` or similar. How do I fix it?
-
-A. Ensure that in your `settings.gradle` file, has the kotlin version set to 1.9.0
-```
-plugins {
-    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    id "com.android.application" version "7.3.0" apply false
-    id "org.jetbrains.kotlin.android" version "1.9.0" apply false <--- check version here
-}
-```
+Note: This is a demo application intended to showcase the Finvu Android SDK implementation. For production use, please refer to the official documentation and implement appropriate security measures.
