@@ -123,7 +123,7 @@ class DiscoverActivity : AppCompatActivity() {
 
             // Fetch discovered accounts
             runOnUiThread {
-                finvuManager.discoverAccounts(fipDetails!!, fiTypes, identifiers) { discoveryResult ->
+                finvuManager.discoverAccounts(fipDetails!!.fipId, fiTypes, identifiers) { discoveryResult ->
                     runOnUiThread {
                         if (discoveryResult.isSuccess) {
                             val discoveredAccounts = discoveryResult.getOrNull()?.discoveredAccounts
