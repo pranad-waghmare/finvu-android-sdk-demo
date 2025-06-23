@@ -2,6 +2,7 @@ package com.finvu.android_demo.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.finvu.android.FinvuManager
@@ -34,6 +35,18 @@ class MainActivity : AppCompatActivity() {
 
         v.goToAddAccount.setOnClickListener {
             startActivity(Intent(this@MainActivity, PopularSearchActivity::class.java))
+        }
+
+        v.btnRevoke.setOnClickListener {
+            finvuManager.revokeConsent(v.etConsentId.text.toString(), null, null) {
+                runOnUiThread {
+                    if (it.isSuccess)
+                        Toast.makeText(this@MainActivity, "Consent Revoked", Toast.LENGTH_SHORT)
+                            .show()
+                    else
+                        Toast.makeText(this@MainActivity, "something went wrong!!", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
 

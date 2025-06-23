@@ -35,9 +35,7 @@ class LoginActivity : AppCompatActivity() {
 
         // Pre-Filled Consent handle IDs for demo app, in PROD make sure new handle IDs are created for each account selected for split consent
         var consentHandleIds = mutableListOf(
-            "c518e2a3-d738-4241-a744-49e23832a643",
-            "62584175-37e4-462f-a4c9-3b95247b80c3",
-            "ef4c9d2d-90a5-410c-a212-86c10846cf13"
+            "8e4b870b-a4fe-4cf4-9e07-a550a960e50g"
         )
         var username = ""
     }

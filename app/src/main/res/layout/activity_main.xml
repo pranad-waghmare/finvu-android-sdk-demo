@@ -56,6 +56,31 @@
             android:layout_height="wrap_content"
             android:text="Process Consent" />
 
+
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="10dp"
+            android:text="Revoke Consent"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+        <EditText
+            android:id="@+id/etConsentId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Consent Id" />
+
+        <Button
+            android:id="@+id/btnRevoke"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Revoke Consent" />
+
     </LinearLayout>
 
 
