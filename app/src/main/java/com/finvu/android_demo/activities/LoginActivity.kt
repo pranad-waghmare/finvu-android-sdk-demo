@@ -1,16 +1,22 @@
 package com.finvu.android_demo.activities
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.app.utils.GeneralUtils
 import com.finvu.android.FinvuManager
 import com.finvu.android.publicInterface.FinvuErrorCode
 import com.finvu.android.publicInterface.FinvuException
+import com.finvu.android.types.FinvuEnvironment
 import com.finvu.android.utils.FinvuConfig
+import com.finvu.android.utils.FinvuSNAAuthConfig
 import com.finvu.android_demo.databinding.ActivityLoginBinding
+import kotlinx.coroutines.CoroutineScope
 
 class LoginActivity : AppCompatActivity() {
 
@@ -20,22 +26,31 @@ class LoginActivity : AppCompatActivity() {
     var otpReference: String? = null
 
     private val baseUrl = "wss://webvwdev.finvu.in/consentapi"
-    private val finvuClientConfig =
-        FinvuClientConfig(finvuEndpoint = baseUrl, certificatePins = listOf())
+    private val finvuClientConfig = FinvuClientConfig(
+        finvuEndpoint = baseUrl, certificatePins = listOf(
+        ), finvuSNAAuthConfig = FinvuSNAAuthClientConfig(
+            this, lifecycleScope, FinvuEnvironment.UAT
+        )
+    )
+
+    data class FinvuSNAAuthClientConfig(
+        override val activity: Activity,
+        override var scope: CoroutineScope,
+        override val env: FinvuEnvironment
+    ) : FinvuSNAAuthConfig
 
     data class FinvuClientConfig(
         override val finvuEndpoint: String,
-        override val certificatePins: List<String>?
+        override val certificatePins: List<String>?,
+        override val finvuSNAAuthConfig: FinvuSNAAuthConfig?
     ) : FinvuConfig
 
     private val v get() = _binding!!
 
     companion object {
         var mobileNumber = ""
-
-        // Pre-Filled Consent handle IDs for demo app, in PROD make sure new handle IDs are created for each account selected for split consent
         var consentHandleIds = mutableListOf(
-            "8e4b870b-a4fe-4cf4-9e07-a550a960e50g"
+            "6b1f4a97-8190-488c-a808-63e75e73fe91"
         )
         var username = ""
     }
@@ -46,6 +61,8 @@ class LoginActivity : AppCompatActivity() {
         setContentView(v.root)
         v.etConsentHandleId.setText(consentHandleIds[0])
         finvuManager.initializeWith(finvuClientConfig)
+
+        // connect Finvu manager
         finvuManager.connect { result ->
             runOnUiThread {
                 if (result.isSuccess) {
@@ -69,58 +86,159 @@ class LoginActivity : AppCompatActivity() {
             }
         }
 
+        // login button
         v.btnLogin.setOnClickListener {
-            if (v.etUsername.text.isNotEmpty() && v.etMobileNumber.text.isNotEmpty() && v.etConsentHandleId.text.isNotEmpty()) {
-                finvuManager.loginWithUsernameOrMobileNumber(
-                    username = v.etUsername.text.toString(),
-                    mobileNumber = v.etMobileNumber.text.toString(),
-                    consentHandleId = v.etConsentHandleId.text.toString(),
-                    completion = { result ->
-                        runOnUiThread {
-                            if (result.isSuccess) {
-                                loginError = false
-                                v.etOtp.visibility = View.VISIBLE
-                                v.btnVerify.visibility = View.VISIBLE
-                                otpReference = result.getOrNull()?.reference
-                            } else {
-                                loginError = true
-                                GeneralUtils(this@LoginActivity).showDialog(result.exceptionOrNull()?.message.toString())
-                            }
-                        }
-                    })
-            } else {
-                GeneralUtils(this@LoginActivity).showDialog("Please enter username and passcode")
-            }
-
+            triggerLoginFlow()
         }
 
+        // manual OTP verify button
         v.btnVerify.setOnClickListener {
             if (otpReference != null) {
                 if (v.etOtp.text.isNotEmpty()) {
-                    finvuManager.verifyLoginOtp(
-                        otp = v.etOtp.text.toString(),
-                        otpReference = otpReference!!,
-                        completion = { result ->
-                            if (result.isSuccess) {
-                                mobileNumber = v.etMobileNumber.text.toString()
-                                consentHandleIds[0] = v.etConsentHandleId.text.toString()
-                                username = v.etUsername.text.toString()
-                                startActivity(
-                                    Intent(
-                                        this@LoginActivity,
-                                        MainActivity::class.java
-                                    )
-                                )
-                            }
-                        })
+                    performOtpVerification(v.etOtp.text.toString(), otpReference!!)
                 } else {
                     GeneralUtils(this@LoginActivity).showDialog("Please enter otp")
                 }
-
+            } else {
+                GeneralUtils(this@LoginActivity).showDialog("No OTP reference available. Please login again.")
             }
-
         }
-
     }
 
+    /**
+     * Trigger login — primary call that handles SNA and, if snaToken == null,
+     * does a single secondary login call to obtain OTP reference for manual flow.
+     */
+    private fun triggerLoginFlow() {
+        if (v.etUsername.text.isNotEmpty() && v.etMobileNumber.text.isNotEmpty() && v.etConsentHandleId.text.isNotEmpty()) {
+
+            // First login attempt (may return snaToken)
+            finvuManager.loginWithUsernameOrMobileNumber(username = v.etUsername.text.toString(),
+                mobileNumber = v.etMobileNumber.text.toString(),
+                consentHandleId = v.etConsentHandleId.text.toString(),
+                completion = { result ->
+                    runOnUiThread {
+                        if (result.isSuccess) {
+                            val loginResult = result.getOrNull()
+                            loginError = false
+                            otpReference = loginResult?.reference
+
+                            val snaToken = loginResult?.snaToken
+                            if (!snaToken.isNullOrEmpty() && otpReference != null) {
+                                // SNA succeeded -> auto-verify with snaToken
+                                Log.d("LoginActivity", "✅ SNA Token: $snaToken")
+                                Log.d("LoginActivity", "Login OTP Reference: $otpReference")
+
+                                GeneralUtils(this@LoginActivity).showDialog(
+                                    "SNA Authentication Successful!\n\nUsing SNA Token to verify login."
+                                )
+
+                                v.etOtp.visibility = View.GONE
+                                v.btnVerify.visibility = View.GONE
+
+                                // Auto-verify with snaToken
+                                performOtpVerification(snaToken, otpReference!!, isSnaFlow = true)
+                            } else {
+                                // SNA token is null => log and perform a single additional login to get OTP reference
+                                Log.w(
+                                    "LoginActivity",
+                                    "⚠️ SNA failed or no token received. Performing a single fallback login to obtain OTP reference."
+                                )
+                                // Inform user
+                                GeneralUtils(this@LoginActivity).showDialog("SNA not available. Attempting to obtain OTP reference...")
+
+                                // Secondary login call (one-time) to get OTP reference for manual OTP flow
+                                finvuManager.loginWithUsernameOrMobileNumber(username = v.etUsername.text.toString(),
+                                    mobileNumber = v.etMobileNumber.text.toString(),
+                                    consentHandleId = v.etConsentHandleId.text.toString(),
+                                    completion = { secondResult ->
+                                        runOnUiThread {
+                                            if (secondResult.isSuccess) {
+                                                val secondLogin = secondResult.getOrNull()
+                                                otpReference = secondLogin?.reference
+                                                if (!otpReference.isNullOrEmpty()) {
+                                                    Log.i(
+                                                        "LoginActivity",
+                                                        "Fallback login returned OTP reference: $otpReference"
+                                                    )
+                                                    GeneralUtils(this@LoginActivity).showDialog("OTP sent. Please enter the OTP.")
+                                                    v.etOtp.visibility = View.VISIBLE
+                                                    v.btnVerify.visibility = View.VISIBLE
+                                                } else {
+                                                    Log.e(
+                                                        "LoginActivity",
+                                                        "Fallback login succeeded but no OTP reference returned."
+                                                    )
+                                                    GeneralUtils(this@LoginActivity).showDialog("Unable to obtain OTP reference. Please try again.")
+                                                    v.etOtp.visibility = View.VISIBLE
+                                                    v.btnVerify.visibility = View.VISIBLE
+                                                }
+                                            } else {
+                                                Log.e(
+                                                    "LoginActivity",
+                                                    "Fallback login failed: ${secondResult.exceptionOrNull()?.message}"
+                                                )
+                                                GeneralUtils(this@LoginActivity).showDialog("Login failed: ${secondResult.exceptionOrNull()?.message}")
+                                                v.etOtp.visibility = View.VISIBLE
+                                                v.btnVerify.visibility = View.VISIBLE
+                                            }
+                                        }
+                                    })
+                            }
+                        } else {
+                            loginError = true
+                            GeneralUtils(this@LoginActivity).showDialog(
+                                result.exceptionOrNull()?.message.toString()
+                            )
+                        }
+                    }
+                })
+        } else {
+            GeneralUtils(this@LoginActivity).showDialog("Please enter username and passcode")
+        }
+    }
+
+    /**
+     * Common function to verify OTP or SNA token
+     * @param isSnaFlow if true, after SNA-based verify failure we could decide to re-initiate login; kept for compatibility
+     */
+    private fun performOtpVerification(
+        otp: String, otpReference: String, isSnaFlow: Boolean = false
+    ) {
+        finvuManager.verifyLoginOtp(otp = otp, otpReference = otpReference, completion = { result ->
+            runOnUiThread {
+                if (result.isSuccess) {
+                    mobileNumber = v.etMobileNumber.text.toString()
+                    consentHandleIds[0] = v.etConsentHandleId.text.toString()
+                    username = v.etUsername.text.toString()
+                    startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                } else {
+                    Log.e(
+                        "LoginActivity",
+                        "❌ OTP/SNA verify failed: ${result.exceptionOrNull()?.message}"
+                    )
+                    GeneralUtils(this@LoginActivity).showDialog(
+                        "Verification failed: ${result.exceptionOrNull()?.message}"
+                    )
+
+                    // If SNA-based verification failed, let user proceed with manual OTP flow:
+                    if (isSnaFlow) {
+                        Log.w(
+                            "LoginActivity",
+                            "SNA verify failed. Please use manual OTP verification."
+                        )
+                        // Show OTP UI so user can manually enter OTP if available
+                        v.etOtp.visibility = View.VISIBLE
+                        v.btnVerify.visibility = View.VISIBLE
+                        // Do not automatically loop — user will trigger login again or use the shown OTP UI
+                    }
+                }
+            }
+        })
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
+    }
 }
