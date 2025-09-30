@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.finvu.android_demo"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.finvu.android_demo"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 25
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -38,8 +38,10 @@ android {
 }
 
 dependencies {
-    implementation("com.finvu.android:core-sdk:1.0.4")
-    implementation("com.finvu.android:client-sdk:1.0.4")
+    implementation("com.finvu.android:client-sdk:1.0.5")
+    implementation("com.finvu.android:core-sdk:1.0.5")
+    // to use sna uncomment the below
+//    implementation("com.finvu.android:sna-adapter:1.0.0")
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
