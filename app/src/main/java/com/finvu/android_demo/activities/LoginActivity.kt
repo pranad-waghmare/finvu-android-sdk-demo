@@ -25,7 +25,7 @@ class LoginActivity : AppCompatActivity() {
     private var _binding: ActivityLoginBinding? = null
     var otpReference: String? = null
 
-    private val baseUrl = "wss://webvwdev.finvu.in/consentapi"
+    private val baseUrl = "wss://webvwdev.finvu.in/consentapiv2"
     private val finvuClientConfig = FinvuClientConfig(
         finvuEndpoint = baseUrl, certificatePins = listOf(
         ), finvuSNAAuthConfig = FinvuSNAAuthClientConfig(
@@ -50,7 +50,7 @@ class LoginActivity : AppCompatActivity() {
     companion object {
         var mobileNumber = ""
         var consentHandleIds = mutableListOf(
-            "6b1f4a97-8190-488c-a808-63e75e73fe91"
+            ""
         )
         var username = ""
     }
@@ -142,48 +142,12 @@ class LoginActivity : AppCompatActivity() {
                                 // SNA token is null => log and perform a single additional login to get OTP reference
                                 Log.w(
                                     "LoginActivity",
-                                    "⚠️ SNA failed or no token received. Performing a single fallback login to obtain OTP reference."
+                                    "⚠️ SNA failed or no token received."
                                 )
-                                // Inform user
-                                GeneralUtils(this@LoginActivity).showDialog("SNA not available. Attempting to obtain OTP reference...")
 
-                                // Secondary login call (one-time) to get OTP reference for manual OTP flow
-                                finvuManager.loginWithUsernameOrMobileNumber(username = v.etUsername.text.toString(),
-                                    mobileNumber = v.etMobileNumber.text.toString(),
-                                    consentHandleId = v.etConsentHandleId.text.toString(),
-                                    completion = { secondResult ->
-                                        runOnUiThread {
-                                            if (secondResult.isSuccess) {
-                                                val secondLogin = secondResult.getOrNull()
-                                                otpReference = secondLogin?.reference
-                                                if (!otpReference.isNullOrEmpty()) {
-                                                    Log.i(
-                                                        "LoginActivity",
-                                                        "Fallback login returned OTP reference: $otpReference"
-                                                    )
-                                                    GeneralUtils(this@LoginActivity).showDialog("OTP sent. Please enter the OTP.")
-                                                    v.etOtp.visibility = View.VISIBLE
-                                                    v.btnVerify.visibility = View.VISIBLE
-                                                } else {
-                                                    Log.e(
-                                                        "LoginActivity",
-                                                        "Fallback login succeeded but no OTP reference returned."
-                                                    )
-                                                    GeneralUtils(this@LoginActivity).showDialog("Unable to obtain OTP reference. Please try again.")
-                                                    v.etOtp.visibility = View.VISIBLE
-                                                    v.btnVerify.visibility = View.VISIBLE
-                                                }
-                                            } else {
-                                                Log.e(
-                                                    "LoginActivity",
-                                                    "Fallback login failed: ${secondResult.exceptionOrNull()?.message}"
-                                                )
-                                                GeneralUtils(this@LoginActivity).showDialog("Login failed: ${secondResult.exceptionOrNull()?.message}")
-                                                v.etOtp.visibility = View.VISIBLE
-                                                v.btnVerify.visibility = View.VISIBLE
-                                            }
-                                        }
-                                    })
+                                GeneralUtils(this@LoginActivity).showDialog("SNA not available. enter otp...")
+                                v.etOtp.visibility = View.VISIBLE
+                                v.btnVerify.visibility = View.VISIBLE
                             }
                         } else {
                             loginError = true
