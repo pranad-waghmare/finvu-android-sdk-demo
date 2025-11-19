@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.app.utils.GeneralUtils
 import com.finvu.android.FinvuManager
+import com.finvu.android.publicInterface.FinvuException
 import com.finvu.android_demo.databinding.ActivityAccountLinkingConfirmBinding
 
 class AccountLinkingConfirmActivity : AppCompatActivity() {
@@ -49,6 +50,8 @@ class AccountLinkingConfirmActivity : AppCompatActivity() {
                     finish()
 
                 } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ AccountLinkingConfirmActivity - Confirm account linking failed - Code: ${exception?.code}, Message: ${exception?.message}")
                     GeneralUtils(this@AccountLinkingConfirmActivity).showDialog("Failed")
                 }
             }

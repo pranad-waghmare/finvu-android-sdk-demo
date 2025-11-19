@@ -2,10 +2,12 @@ package com.finvu.android_demo.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.finvu.android.FinvuManager
+import com.finvu.android.publicInterface.FinvuException
 import com.finvu.android_demo.DemoApplication
 import com.finvu.android_demo.adapters.LinkedAccountsAdapter
 import com.finvu.android_demo.databinding.ActivityMainBinding
@@ -43,8 +45,11 @@ class MainActivity : AppCompatActivity() {
                     if (it.isSuccess)
                         Toast.makeText(this@MainActivity, "Consent Revoked", Toast.LENGTH_SHORT)
                             .show()
-                    else
+                    else {
+                        val exception = it.exceptionOrNull() as? FinvuException
+                        Log.e("FinvuError", "❌ MainActivity - Revoke consent failed - Code: ${exception?.code}, Message: ${exception?.message}")
                         Toast.makeText(this@MainActivity, "something went wrong!!", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -63,6 +68,9 @@ class MainActivity : AppCompatActivity() {
                         false
                     )
                     v.rvLinkedAccounts.adapter = LinkedAccountsAdapter(list)
+                } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ MainActivity - Fetch linked accounts failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 }
             }
         }

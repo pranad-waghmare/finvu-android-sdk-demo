@@ -2,12 +2,14 @@ package com.finvu.android_demo.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.finvu.android.FinvuManager
 import com.finvu.android.publicInterface.ConsentDetail
+import com.finvu.android.publicInterface.FinvuException
 import com.finvu.android.publicInterface.LinkedAccountDetails
 import com.finvu.android_demo.adapters.LinkedAccountsSelectableAdapter
 import com.finvu.android_demo.databinding.ActivityProcessConsentBinding
@@ -53,6 +55,8 @@ class ProcessConsentActivity : AppCompatActivity() {
                         finishAffinity()
                     }
                 } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ ProcessConsentActivity - Deny consent failed - Code: ${exception?.code}, Message: ${exception?.message}")
                     runOnUiThread {
                         Toast.makeText(this, "Error rejecting consent", Toast.LENGTH_SHORT).show()
                     }
@@ -101,6 +105,8 @@ class ProcessConsentActivity : AppCompatActivity() {
                             }
 
                         } else {
+                            val exception = result.exceptionOrNull() as? FinvuException
+                            Log.e("FinvuError", "❌ ProcessConsentActivity - Approve consent (parent) failed - Code: ${exception?.code}, Message: ${exception?.message}")
                             runOnUiThread {
                                 Toast.makeText(this, "Error accepting consent", Toast.LENGTH_SHORT)
                                     .show()
@@ -135,6 +141,8 @@ class ProcessConsentActivity : AppCompatActivity() {
 
                                 }
                             } else {
+                                val exception = result.exceptionOrNull() as? FinvuException
+                                Log.e("FinvuError", "❌ ProcessConsentActivity - Approve consent (child) failed - Code: ${exception?.code}, Message: ${exception?.message}")
                                 runOnUiThread {
                                     Toast.makeText(
                                         this,
@@ -176,6 +184,8 @@ class ProcessConsentActivity : AppCompatActivity() {
                     finishAffinity()
                 }
             } else {
+                val exception = result.exceptionOrNull() as? FinvuException
+                Log.e("FinvuError", "❌ ProcessConsentActivity - Approve consent (multi) failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 runOnUiThread {
                     Toast.makeText(this, "Error accepting consent", Toast.LENGTH_SHORT).show()
                 }
@@ -207,6 +217,8 @@ class ProcessConsentActivity : AppCompatActivity() {
                     v.rvLinkedAccounts.adapter = linkedAccountsSelectableAdapter
                 }
             } else {
+                val exception = result.exceptionOrNull() as? FinvuException
+                Log.e("FinvuError", "❌ ProcessConsentActivity - Fetch linked accounts failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 runOnUiThread {
                     Toast.makeText(this, "Error fetching linked accounts", Toast.LENGTH_SHORT)
                         .show()
@@ -219,6 +231,8 @@ class ProcessConsentActivity : AppCompatActivity() {
         var returnObj: ConsentDetail
         FinvuManager.shared.getConsentRequestDetails(handleId) { result ->
             if (result.isFailure) {
+                val exception = result.exceptionOrNull() as? FinvuException
+                Log.e("FinvuError", "❌ ProcessConsentActivity - Get consent request details failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 // Show generic error message via toast on ui thread
                 runOnUiThread {
                     Toast.makeText(
