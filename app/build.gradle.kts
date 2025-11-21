@@ -38,10 +38,10 @@ android {
 }
 
 dependencies {
-    implementation("com.finvu.android:client-sdk:1.0.8")
-    implementation("com.finvu.android:core-sdk:1.0.7")
+    implementation("com.finvu.android:client-sdk:1.0.9")
+    implementation("com.finvu.android:core-sdk:1.1.0.8")
     // to use sna uncomment the below
-     implementation("com.finvu.android:sna-adapter:1.0.3")
+    //  implementation("com.finvu.android:sna-adapter:1.0.4")
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")

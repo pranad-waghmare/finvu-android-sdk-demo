@@ -151,6 +151,8 @@ class LoginActivity : AppCompatActivity() {
                             }
                         } else {
                             loginError = true
+                            val exception = result.exceptionOrNull() as? FinvuException
+                            Log.e("FinvuError", "❌ LoginActivity - Login failed - Code: ${exception?.code}, Message: ${exception?.message}")
                             GeneralUtils(this@LoginActivity).showDialog(
                                 result.exceptionOrNull()?.message.toString()
                             )
@@ -177,10 +179,8 @@ class LoginActivity : AppCompatActivity() {
                     username = v.etUsername.text.toString()
                     startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                 } else {
-                    Log.e(
-                        "LoginActivity",
-                        "❌ OTP/SNA verify failed: ${result.exceptionOrNull()?.message}"
-                    )
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ LoginActivity - OTP/SNA verify failed - Code: ${exception?.code}, Message: ${exception?.message}")
                     GeneralUtils(this@LoginActivity).showDialog(
                         "Verification failed: ${result.exceptionOrNull()?.message}"
                     )

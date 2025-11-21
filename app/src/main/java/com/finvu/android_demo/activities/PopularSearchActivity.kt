@@ -2,12 +2,14 @@ package com.finvu.android_demo.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.finvu.android_demo.adapters.PopularSearchAdapter
 import com.example.app.utils.GeneralUtils
 import com.finvu.android.FinvuManager
 import com.finvu.android.publicInterface.FIPInfo
+import com.finvu.android.publicInterface.FinvuException
 import com.finvu.android_demo.databinding.ActivityPopularSearchBinding
 
 class PopularSearchActivity : AppCompatActivity() {
@@ -46,6 +48,8 @@ class PopularSearchActivity : AppCompatActivity() {
                             })
                     }
                 } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ PopularSearchActivity - Fetch FIPs failed - Code: ${exception?.code}, Message: ${exception?.message}")
                     GeneralUtils(this@PopularSearchActivity).showDialog("Failed")
                 }
             }

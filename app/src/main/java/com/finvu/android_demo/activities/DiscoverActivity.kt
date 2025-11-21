@@ -2,6 +2,7 @@ package com.finvu.android_demo.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -13,6 +14,7 @@ import com.example.app.utils.GeneralUtils
 import com.finvu.android.FinvuManager
 import com.finvu.android.publicInterface.DiscoveredAccount
 import com.finvu.android.publicInterface.FipDetails
+import com.finvu.android.publicInterface.FinvuException
 import com.finvu.android.publicInterface.TypeIdentifierInfo
 import com.finvu.android_demo.databinding.ActivityDiscoverBinding
 
@@ -81,6 +83,9 @@ class DiscoverActivity : AppCompatActivity() {
                                 .into(v.ivFipLogo)
                         }
                     }
+                } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ DiscoverActivity - Get entity info failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 }
             }
         }
@@ -111,6 +116,8 @@ class DiscoverActivity : AppCompatActivity() {
         // Fetch FIP details
         finvuManager.fetchFipDetails(fipId) { result ->
             if (result.isFailure) {
+                val exception = result.exceptionOrNull() as? FinvuException
+                Log.e("FinvuError", "❌ DiscoverActivity - Fetch FIP details failed - Code: ${exception?.code}, Message: ${exception?.message}")
                 return@fetchFipDetails
             }
 
@@ -184,11 +191,15 @@ class DiscoverActivity : AppCompatActivity() {
                                             v.rvDiscoveredAccounts.adapter = adapter
                                         }
                                     } else {
+                                        val exception = linkedAccountsResult.exceptionOrNull() as? FinvuException
+                                        Log.e("FinvuError", "❌ DiscoverActivity - Fetch linked accounts failed - Code: ${exception?.code}, Message: ${exception?.message}")
                                         GeneralUtils(this@DiscoverActivity).showDialog("Failed to fetch linked accounts")
                                     }
                                 }
                             }
                         } else {
+                            val exception = discoveryResult.exceptionOrNull() as? FinvuException
+                            Log.e("FinvuError", "❌ DiscoverActivity - Discover accounts failed - Code: ${exception?.code}, Message: ${exception?.message}")
                             GeneralUtils(this@DiscoverActivity).showDialog(
                                 discoveryResult.exceptionOrNull()?.message
                                     ?: "Failed to discover accounts"
@@ -228,6 +239,8 @@ class DiscoverActivity : AppCompatActivity() {
                     )
 
                 } else {
+                    val exception = result.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ DiscoverActivity - Link accounts failed - Code: ${exception?.code}, Message: ${exception?.message}")
                     GeneralUtils(this@DiscoverActivity).showDialog(
                         result.exceptionOrNull()?.message ?: "Failed"
                     )
