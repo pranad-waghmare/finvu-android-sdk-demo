@@ -46,14 +46,8 @@ class ProcessConsentActivity : AppCompatActivity() {
                 if (result.isSuccess) {
                     runOnUiThread {
                         Toast.makeText(this, "Consent rejected", Toast.LENGTH_LONG).show()
-                        startActivity(
-                            Intent(
-                                this@ProcessConsentActivity,
-                                LoginActivity::class.java
-                            )
-                        )
-                        finishAffinity()
                     }
+                    getConsentHandleStatusAndLogout(LoginActivity.consentHandleIds[0])
                 } else {
                     val exception = result.exceptionOrNull() as? FinvuException
                     Log.e("FinvuError", "❌ ProcessConsentActivity - Deny consent failed - Code: ${exception?.code}, Message: ${exception?.message}")
@@ -95,13 +89,7 @@ class ProcessConsentActivity : AppCompatActivity() {
                             }
 
                             if (index == linkedAccountsSelectableAdapter!!.getSelectedItems().size - 1) {
-                                startActivity(
-                                    Intent(
-                                        this@ProcessConsentActivity,
-                                        LoginActivity::class.java
-                                    )
-                                )
-                                finishAffinity()
+                                getConsentHandleStatusAndLogout(LoginActivity.consentHandleIds[0])
                             }
 
                         } else {
@@ -130,13 +118,7 @@ class ProcessConsentActivity : AppCompatActivity() {
                                         .show()
 
                                     if (index == linkedAccountsSelectableAdapter!!.getSelectedItems().size - 1) {
-                                        startActivity(
-                                            Intent(
-                                                this@ProcessConsentActivity,
-                                                LoginActivity::class.java
-                                            )
-                                        )
-                                        finishAffinity()
+                                        getConsentHandleStatusAndLogout(LoginActivity.consentHandleIds[index])
                                     }
 
                                 }
@@ -175,14 +157,8 @@ class ProcessConsentActivity : AppCompatActivity() {
             if (result.isSuccess) {
                 runOnUiThread {
                     Toast.makeText(this, "Consent accepted", Toast.LENGTH_LONG).show()
-                    startActivity(
-                        Intent(
-                            this@ProcessConsentActivity,
-                            LoginActivity::class.java
-                        )
-                    )
-                    finishAffinity()
                 }
+                getConsentHandleStatusAndLogout(LoginActivity.consentHandleIds[0])
             } else {
                 val exception = result.exceptionOrNull() as? FinvuException
                 Log.e("FinvuError", "❌ ProcessConsentActivity - Approve consent (multi) failed - Code: ${exception?.code}, Message: ${exception?.message}")
@@ -299,6 +275,48 @@ class ProcessConsentActivity : AppCompatActivity() {
         val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
         dateFormat.timeZone = TimeZone.getTimeZone("UTC")
         return dateFormat.format(date)
+    }
+
+    private fun getConsentHandleStatusAndLogout(consentHandleId: String) {
+        FinvuManager.shared.getConsentHandleStatus(consentHandleId) { result ->
+            if (result.isFailure) {
+                val error = result.exceptionOrNull()
+                Log.e("FinvuError", "❌ ProcessConsentActivity - Get consent handle status failed - Code: ${(error as? FinvuException)?.code}, Message: ${error?.message}")
+                runOnUiThread {
+                    Toast.makeText(this, "Error getting consent status", Toast.LENGTH_SHORT).show()
+                }
+                return@getConsentHandleStatus
+            }
+
+            // After getting consent status, call logout
+            FinvuManager.shared.logout { logoutResult ->
+                if (logoutResult.isSuccess) {
+                    runOnUiThread {
+                        Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+                        startActivity(
+                            Intent(
+                                this@ProcessConsentActivity,
+                                LoginActivity::class.java
+                            )
+                        )
+                        finishAffinity()
+                    }
+                } else {
+                    val exception = logoutResult.exceptionOrNull() as? FinvuException
+                    Log.e("FinvuError", "❌ ProcessConsentActivity - Logout failed - Code: ${exception?.code}, Message: ${exception?.message}")
+                    runOnUiThread {
+                        Toast.makeText(this, "Error logging out", Toast.LENGTH_SHORT).show()
+                        startActivity(
+                            Intent(
+                                this@ProcessConsentActivity,
+                                LoginActivity::class.java
+                            )
+                        )
+                        finishAffinity()
+                    }
+                }
+            }
+        }
     }
 
 }
